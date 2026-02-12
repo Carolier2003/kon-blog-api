@@ -12,6 +12,12 @@
 	},
 	"compatibility_flags": [
 		"nodejs_compat"
+	],
+	"routes": [
+		{
+			"pattern": "api.kon-carol.xyz",
+			"custom_domain": true
+		}
 	]
 	/**
 	 * Smart Placement

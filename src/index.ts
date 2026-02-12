@@ -11,8 +11,22 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
+export interface Env {}
+
 export default {
-	async fetch(request, env, ctx): Promise<Response> {
-		return new Response('Hello World!');
-	},
-} satisfies ExportedHandler<Env>;
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+
+    // 健康检查接口
+    if (url.pathname === "/api/health") {
+      return Response.json({
+        status: "ok",
+        service: "kon-blog-api",
+        time: new Date().toISOString(),
+      });
+    }
+
+    return new Response("Not Found", { status: 404 });
+  },
+};
+
