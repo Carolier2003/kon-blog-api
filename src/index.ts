@@ -1,32 +1,78 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { commentsRoute } from "./routes/comments";
+import { adminRoute } from "./routes/admin";
+import { pageviewsRoute } from "./routes/pageviews";
 
-export interface Env {}
+// 扩展 Env 接口
+export interface Env {
+  kon_blog_db: D1Database;
+  ADMIN_USERNAME?: string;
+  ADMIN_PASSWORD?: string;
+}
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const url = new URL(request.url);
+// 创建应用
+const app = new Hono<{ Bindings: Env }>();
 
-    // 健康检查接口
-    if (url.pathname === "/api/health") {
-      return Response.json({
-        status: "ok",
-        service: "kon-blog-api",
-        time: new Date().toISOString(),
-      });
-    }
+// CORS 配置（允许博客域名访问）
+app.use(
+  "/api/*",
+  cors({
+    origin: [
+      "https://kon-carol.xyz",
+      "https://www.kon-carol.xyz",
+      "https://blog.kon-carol.xyz",
+      "https://carols-blog.pages.dev",
+      "http://localhost:4321",
+      "http://localhost:8787",
+    ],
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["Content-Type"],
+    credentials: false,
+    maxAge: 86400,
+  })
+);
 
-    return new Response("Not Found", { status: 404 });
-  },
-};
+// 健康检查
+app.get("/api/health", (c) => {
+  return c.json({
+    status: "ok",
+    service: "kon-blog-api",
+    version: "1.0.0",
+    time: new Date().toISOString(),
+  });
+});
 
+// 评论路由
+app.route("/api/comments", commentsRoute);
+
+// 浏览量统计路由
+app.route("/api/views", pageviewsRoute);
+
+// 管理后台路由（带 Basic Auth）
+app.route("/admin", adminRoute);
+
+// 404 处理
+app.notFound((c) => {
+  return c.json(
+    {
+      success: false,
+      message: "API 端点不存在",
+    },
+    404
+  );
+});
+
+// 错误处理
+app.onError((err, c) => {
+  console.error("Server error:", err);
+  return c.json(
+    {
+      success: false,
+      message: "服务器内部错误",
+    },
+    500
+  );
+});
+
+export default app;
