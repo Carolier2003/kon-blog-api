@@ -82,8 +82,8 @@ export const pageviewsRoute = new Hono<{ Bindings: Env }>()
         success: true,
         views: result
       }, 200, {
-        // 缓存 5 分钟
-        "Cache-Control": "public, max-age=300"
+        // 缓存 1 小时，stale-while-revalidate 1 天
+        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400"
       });
     } catch (error) {
       console.error("Failed to get batch view counts:", error);
