@@ -52,6 +52,43 @@ async function checkRateLimit(
 }
 
 // 创建路由
+/**
+ * 使用 Cloudflare Cache API 缓存响应
+ */
+async function cacheResponse(c: any, key: string, data: any, ttlSeconds: number = 60) {
+  const cache = caches.default;
+  const cacheKey = new Request(`https://cache.kon-carol.xyz/${key}`, {
+    method: 'GET'
+  });
+
+  const response = new Response(JSON.stringify(data), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': `max-age=${ttlSeconds}`,
+    }
+  });
+
+  c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
+}
+
+/**
+ * 从 Cloudflare Cache 获取缓存
+ */
+async function getCachedResponse(c: any, key: string): Promise<any | null> {
+  const cache = caches.default;
+  const cacheKey = new Request(`https://cache.kon-carol.xyz/${key}`, {
+    method: 'GET'
+  });
+
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    return await cached.json();
+  }
+  return null;
+}
+
+// 创建路由
 export const pageviewsRoute = new Hono<{ Bindings: Env }>()
   // 批量获取文章浏览量（放在 /:slug 之前，避免被捕获）
   .post("/batch", async (c) => {
@@ -69,6 +106,18 @@ export const pageviewsRoute = new Hono<{ Bindings: Env }>()
         );
       }
 
+      // 生成缓存 key（排序后确保一致性）
+      const cacheKey = `batch:${slugs.slice().sort().join(',')}`;
+
+      // 尝试从缓存获取
+      const cached = await getCachedResponse(c, cacheKey);
+      if (cached) {
+        return c.json(cached, 200, {
+          "Cache-Control": "public, max-age=60",
+          "X-Cache": "HIT"
+        });
+      }
+
       const repo = new PageViewRepository(db);
       const views = await repo.getMany(slugs);
 
@@ -78,12 +127,18 @@ export const pageviewsRoute = new Hono<{ Bindings: Env }>()
         result[slug] = views[slug] ?? 0;
       });
 
-      return c.json({
+      const responseData = {
         success: true,
         views: result
-      }, 200, {
-        // 缓存 1 小时，stale-while-revalidate 1 天
-        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400"
+      };
+
+      // 缓存 1 分钟（减少 D1 查询）
+      await cacheResponse(c, cacheKey, responseData, 60);
+
+      return c.json(responseData, 200, {
+        // 浏览器缓存 1 小时，stale-while-revalidate 1 天
+        "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+        "X-Cache": "MISS"
       });
     } catch (error) {
       console.error("Failed to get batch view counts:", error);
