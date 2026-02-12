@@ -53,6 +53,47 @@ async function checkRateLimit(
 
 // 创建路由
 export const pageviewsRoute = new Hono<{ Bindings: Env }>()
+  // 批量获取文章浏览量（放在 /:slug 之前，避免被捕获）
+  .post("/batch", async (c) => {
+    const db = getDB(c);
+
+    try {
+      const body = await c.req.json<{ slugs: string[] }>();
+      const slugs = body.slugs?.filter(Boolean) ?? [];
+
+      // 限制批量查询数量
+      if (slugs.length === 0 || slugs.length > 100) {
+        return c.json(
+          { success: false, message: "无效的请求，slugs 数量必须在 1-100 之间" },
+          400
+        );
+      }
+
+      const repo = new PageViewRepository(db);
+      const views = await repo.getMany(slugs);
+
+      // 确保所有请求的 slug 都有返回值（没有的补 0）
+      const result: Record<string, number> = {};
+      slugs.forEach(slug => {
+        result[slug] = views[slug] ?? 0;
+      });
+
+      return c.json({
+        success: true,
+        views: result
+      }, 200, {
+        // 缓存 5 分钟
+        "Cache-Control": "public, max-age=300"
+      });
+    } catch (error) {
+      console.error("Failed to get batch view counts:", error);
+      return c.json(
+        { success: false, message: "批量获取浏览量失败" },
+        500
+      );
+    }
+  })
+
   // 获取热门文章排行（放在 /:slug 之前，避免被捕获）
   .get("/popular", async (c) => {
     const db = getDB(c);
@@ -155,6 +196,9 @@ export const pageviewsRoute = new Hono<{ Bindings: Env }>()
         success: true,
         slug,
         view_count: count
+      }, 200, {
+        // 缓存 5 分钟
+        "Cache-Control": "public, max-age=300"
       });
     } catch (error) {
       console.error("Failed to get view count:", error);
