@@ -4,16 +4,11 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'worker/kon-blog-api/**'
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: worker/kon-blog-api
 
     steps:
       - name: Checkout
@@ -24,7 +19,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: worker/kon-blog-api/package-lock.json
 
       - name: Install dependencies
         run: npm ci
