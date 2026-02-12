@@ -91,12 +91,14 @@ async function getCachedResponse(c: any, key: string): Promise<any | null> {
 // 创建路由
 export const pageviewsRoute = new Hono<{ Bindings: Env }>()
   // 批量获取文章浏览量（放在 /:slug 之前，避免被捕获）
-  .post("/batch", async (c) => {
+  // 使用 GET 请求以便 CDN 缓存
+  .get("/batch", async (c) => {
     const db = getDB(c);
 
     try {
-      const body = await c.req.json<{ slugs: string[] }>();
-      const slugs = body.slugs?.filter(Boolean) ?? [];
+      // 从 query 参数获取 slugs，逗号分隔
+      const slugsParam = c.req.query("slugs");
+      const slugs = slugsParam ? slugsParam.split(",").filter(Boolean) : [];
 
       // 限制批量查询数量
       if (slugs.length === 0 || slugs.length > 100) {
