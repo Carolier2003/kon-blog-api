@@ -21,5 +21,11 @@
 			"database_name": "kon-blog-db",
 			"database_id": "536a5ed0-8036-4f5e-a06a-124dc33e8e33"
 		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "VIEW_KV",
+			"id": "6fc07cb8dc4c4c8094744f159e4d9961"
+		}
 	]
 }

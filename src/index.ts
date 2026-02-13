@@ -7,6 +7,7 @@ import { pageviewsRoute } from "./routes/pageviews";
 // 扩展 Env 接口
 export interface Env {
   kon_blog_db: D1Database;
+  VIEW_KV: KVNamespace;
   ADMIN_USERNAME?: string;
   ADMIN_PASSWORD?: string;
 }
