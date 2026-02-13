@@ -3,11 +3,14 @@ import { cors } from "hono/cors";
 import { commentsRoute } from "./routes/comments";
 import { adminRoute } from "./routes/admin";
 import { pageviewsRoute } from "./routes/pageviews";
+import { imagesRoute } from "./routes/images";
 
 // 扩展 Env 接口
 export interface Env {
   kon_blog_db: D1Database;
   VIEW_KV: KVNamespace;
+  IMAGE_BUCKET: R2Bucket;
+  CF_ACCOUNT_HASH?: string;
   ADMIN_USERNAME?: string;
   ADMIN_PASSWORD?: string;
 }
@@ -27,7 +30,7 @@ app.use(
       "http://localhost:4321",
       "http://localhost:8787",
     ],
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type"],
     credentials: false,
     maxAge: 86400,
@@ -49,6 +52,9 @@ app.route("/api/comments", commentsRoute);
 
 // 浏览量统计路由
 app.route("/api/views", pageviewsRoute);
+
+// 图片管理路由
+app.route("/api/images", imagesRoute);
 
 // 管理后台路由（带 Basic Auth）
 app.route("/admin", adminRoute);

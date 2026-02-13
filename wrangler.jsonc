@@ -27,5 +27,11 @@
 			"binding": "VIEW_KV",
 			"id": "6fc07cb8dc4c4c8094744f159e4d9961"
 		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "IMAGE_BUCKET",
+			"bucket_name": "carol-blog-images"
+		}
 	]
 }
