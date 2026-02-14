@@ -23,14 +23,30 @@ const app = new Hono<{ Bindings: Env }>();
 app.use(
   "/api/*",
   cors({
-    origin: [
-      "https://kon-carol.xyz",
-      "https://www.kon-carol.xyz",
-      "https://blog.kon-carol.xyz",
-      "https://carols-blog.pages.dev",
-      "http://localhost:4321",
-      "http://localhost:8787",
-    ],
+    origin: (origin) => {
+      // 允许的域名列表
+      const allowedOrigins = [
+        "https://kon-carol.xyz",
+        "https://www.kon-carol.xyz",
+        "https://blog.kon-carol.xyz",
+        "https://carols-blog.pages.dev",
+        "http://localhost:4321",
+        "http://localhost:8787",
+      ];
+
+      // 检查是否在允许列表中
+      if (allowedOrigins.includes(origin)) {
+        return origin;
+      }
+
+      // 允许所有 carols-blog.pages.dev 的子域名（预览部署）
+      if (origin?.match(/^https:\/\/[a-z0-9-]+\.carols-blog\.pages\.dev$/)) {
+        return origin;
+      }
+
+      // 默认不允许
+      return null;
+    },
     allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type"],
     credentials: false,
