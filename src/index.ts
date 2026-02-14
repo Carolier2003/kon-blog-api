@@ -4,6 +4,7 @@ import { commentsRoute } from "./routes/comments";
 import { adminRoute } from "./routes/admin";
 import { pageviewsRoute } from "./routes/pageviews";
 import { imagesRoute } from "./routes/images";
+import contributionsRoute from "./routes/contributions";
 
 // 扩展 Env 接口
 export interface Env {
@@ -55,6 +56,9 @@ app.route("/api/views", pageviewsRoute);
 
 // 图片管理路由
 app.route("/api/images", imagesRoute);
+
+// 贡献统计路由（GitHub + GitCode 合并）
+app.route("/api/contributions", contributionsRoute);
 
 // 管理后台路由（带 Basic Auth）
 app.route("/admin", adminRoute);

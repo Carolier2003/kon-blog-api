@@ -100,6 +100,14 @@ function parseVariantParams(url: URL): {
   return params;
 }
 
+// R2 自定义域名
+const R2_DOMAIN = "r2.kon-carol.xyz";
+
+// 构建 R2 自定义域名 URL
+function buildR2Url(key: string): string {
+  return `https://${R2_DOMAIN}/${key}`;
+}
+
 // 构建 Cloudflare Images URL
 function buildImagesUrl(
   accountHash: string,
@@ -249,9 +257,11 @@ imagesRoute.post("/upload", async (c) => {
         },
       });
 
-      // 构建访问 URL
+      // 构建访问 URL (优先级：R2 > Images > API)
+      const r2Url = buildR2Url(key);
+
       const baseUrl = new URL(c.req.url);
-      const imageUrl = `${baseUrl.origin}/api/images/view/${key}`;
+      const apiUrl = `${baseUrl.origin}/api/images/view/${key}`;
 
       // 构建 Cloudflare Images URL（如果配置了 account hash）
       let imagesUrl: string | undefined;
@@ -259,13 +269,17 @@ imagesRoute.post("/upload", async (c) => {
         imagesUrl = buildImagesUrl(c.env.CF_ACCOUNT_HASH, key, "public");
       }
 
+      // 最终使用的 URL：优先 R2，其次是 Images，最后是 API
+      const finalUrl = r2Url;
+
       uploadedFiles.push({
         key,
         originalName: file.name,
         size: file.size,
         contentType: file.type,
-        url: imageUrl,
-        markdown: `![${file.name}](${imagesUrl || imageUrl})`,
+        url: apiUrl,      // API URL 作为备份
+        r2Url: finalUrl,  // R2 自定义域名（首选）
+        markdown: `![${file.name}](${finalUrl})`,
         imagesUrl,
       });
     }
@@ -308,7 +322,8 @@ imagesRoute.get("/", async (c) => {
 
     const images = await Promise.all(
       listResult.objects.map(async (obj) => {
-        const imageUrl = `${baseUrl.origin}/api/images/view/${obj.key}`;
+        const apiUrl = `${baseUrl.origin}/api/images/view/${obj.key}`;
+        const r2Url = buildR2Url(obj.key);
 
         let imagesUrl: string | undefined;
         if (c.env.CF_ACCOUNT_HASH) {
@@ -319,7 +334,8 @@ imagesRoute.get("/", async (c) => {
           key: obj.key,
           size: obj.size,
           uploadedAt: obj.uploaded,
-          url: imageUrl,
+          url: apiUrl,
+          r2Url,
           imagesUrl,
           customMetadata: obj.customMetadata,
         };
@@ -406,7 +422,8 @@ imagesRoute.get("/info/:key{.+}", async (c) => {
     }
 
     const baseUrl = new URL(c.req.url);
-    const imageUrl = `${baseUrl.origin}/api/images/view/${key}`;
+    const apiUrl = `${baseUrl.origin}/api/images/view/${key}`;
+    const r2Url = buildR2Url(key);
 
     // 构建各种变体的 Images URL
     const variants: Record<string, string> = {};
@@ -424,7 +441,8 @@ imagesRoute.get("/info/:key{.+}", async (c) => {
         uploadedAt: object.uploaded,
         httpMetadata: object.httpMetadata,
         customMetadata: object.customMetadata,
-        url: imageUrl,
+        url: apiUrl,
+        r2Url,
         variants,
       },
     });
