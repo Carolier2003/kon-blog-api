@@ -286,6 +286,9 @@ app.get("/", async (c) => {
       const parsed = JSON.parse(cached) as ContributionResponse;
       // 验证缓存数据完整性
       if (parsed.total !== null && parsed.total !== undefined) {
+        // 添加 CDN 缓存头，缓存 1 小时， stale-while-revalidate 12 小时
+        c.header("Cache-Control", "public, max-age=3600, stale-while-revalidate=43200");
+        c.header("Vary", "Origin");
         return c.json({
           success: true,
           data: parsed,
@@ -298,6 +301,10 @@ app.get("/", async (c) => {
 
     // 缓存未命中或无效，实时获取
     const data = await updateContributionsCache(c.env);
+
+    // 即使是新数据，也添加缓存头（虽然数据刚更新，但可以短暂缓存）
+    c.header("Cache-Control", "public, max-age=60, stale-while-revalidate=3600");
+    c.header("Vary", "Origin");
 
     return c.json({
       success: true,
